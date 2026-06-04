@@ -1,0 +1,13 @@
+python train.py \
+    --dataset cifar10 \
+    --data_dir ../../../data \
+    --batch_size 256 \
+    --epochs 50 \
+    --lr "0.0005" \
+    --device cuda:0 \
+    --checkpoint_dir work_dir/cifar10_b256/checkpoints \
+    --gens_dir work_dir/cifar10_b256/gens \
+    --log_csv work_dir/cifar10_b256/train_metrics.csv \
+    --num_workers 8 \
+    --sample_every 5 \
+    --checkpoint_every 5
