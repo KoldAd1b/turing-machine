@@ -1,0 +1,13 @@
+accelerate launch --num_processes 4 --num_machines 1 --mixed_precision no --dynamo_backend no train.py \
+    --dataset cifar10 \
+    --data_dir ../../../data \
+    --batch_size 64 \
+    --epochs 25 \
+    --lr "0.0005" \
+    --checkpoint_dir work_dir/cifar10_b64_ddp/checkpoints \
+    --gens_dir work_dir/cifar10_b64_ddp/gens \
+    --log_csv work_dir/cifar10_b64_ddp/train_metrics.csv \
+    --num_workers 8 \
+    --sample_every 5 \
+    --num_samples 4 \
+    --checkpoint_every 5
