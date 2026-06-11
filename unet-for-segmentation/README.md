@@ -1,71 +1,89 @@
 # U-Net for Semantic Segmentation
 
-This project implements a U-Net-style model for semantic segmentation.
+I used to think image models mostly answered one question:
 
-Paper: [U-Net: Convolutional Networks for Biomedical Image Segmentation](https://arxiv.org/abs/1505.04597), Ronneberger, Fischer, and Brox, 2015.
+what is in this image?
 
-## What U-Net Does
+Then segmentation forces a much sharper question:
 
-Semantic segmentation is pixel-level classification. Instead of predicting one label for an entire image, the model predicts a class for every pixel.
+what is every single pixel?
 
-For an RGB input image:
+That shift is the whole game. Classification gives one label. Segmentation gives a dense map. Same image, but now the model has to preserve meaning and location at the same time. Annoying, right? Also genuinely beautiful.
+
+This project implements a U-Net-style model for semantic segmentation and trains it on ADE20K.
+
+Original paper: [U-Net: Convolutional Networks for Biomedical Image Segmentation](https://arxiv.org/abs/1505.04597), Ronneberger, Fischer, and Brox, 2015.
+
+## The problem is precision
+
+For a normal image classifier, the output is simple:
+
+```text
+image -> class label
+```
+
+For segmentation, the output has to stay spatial:
 
 ```text
 image:  [3, H, W]
 output: [num_classes, H, W]
 ```
 
-Each pixel gets a class score. During training, cross entropy compares those per-pixel scores against the segmentation mask.
+Every pixel gets class logits.
 
-## Architecture
+So the model needs two things that fight each other a little:
 
-U-Net has two main paths:
+- context, because a pixel only makes sense inside the larger scene
+- precision, because the final answer still has to land on exact pixels
 
-```text
-Input image
-    |
-    v
-Encoder / contracting path
-    - keeps increasing feature channels
-    - keeps reducing spatial resolution
-    - learns context
-    |
-    v
-Bottleneck
-    - lowest-resolution, highest-channel representation
-    |
-    v
-Decoder / expanding path
-    - upsamples spatial resolution
-    - reduces feature channels
-    - combines coarse context with fine detail
-    |
-    v
-Per-pixel class logits
-```
+This is the tension U-Net solves so cleanly.
 
-The important idea is the skip connection:
+## The beautiful move
+
+U-Net has a contracting path and an expanding path.
+
+The encoder compresses the image:
 
 ```text
-encoder feature map  --------------------+
-                                         |
-                                         v
-decoder feature map after upsampling -> concatenate -> convolution block
+high resolution, low-level detail
+        |
+        v
+lower resolution, higher-level context
 ```
 
-The encoder sees the image at progressively coarser scales, so it learns what is present. The decoder restores resolution, so it learns where things are. Skip connections carry high-resolution spatial detail from the encoder into the decoder.
+The decoder expands it back:
 
-That is what makes U-Net useful for segmentation: it does not force the model to reconstruct fine boundaries only from the compressed bottleneck.
+```text
+compressed context
+        |
+        v
+pixel-level prediction
+```
 
-## This Implementation
+If that were the whole architecture, the model would have a problem. The bottleneck knows what is in the image, but a lot of exact boundary information has been squeezed away.
 
-The model is defined in:
+So U-Net keeps the encoder features and hands them back to the decoder through skip connections:
+
+```text
+encoder feature map ----------------------+
+                                          |
+                                          v
+upsampled decoder feature -> concatenate -> conv block
+```
+
+That is the part I find hard to get over.
+
+The model goes down to understand the scene, then comes back up with the details it saved along the way. Context and precision, both carried through the network. Simple, and a little bit magic.
+
+## What is in this implementation
+
+The model lives here:
 
 ```text
 unet_train_parts/model.py
 ```
 
-It uses:
+This version is not a literal line-by-line copy of the 2015 paper. It keeps the U-Net shape, but uses a few modern choices:
 
 - residual convolution blocks
 - group normalization
@@ -73,31 +91,36 @@ It uses:
 - transposed convolutions for upsampling
 - concatenated skip connections between encoder and decoder stages
 
-The ADE20K dataset loader is defined in:
+The ADE20K dataset code lives here:
 
 ```text
 unet_train_parts/dataloader.py
 ```
 
-The training entrypoint is:
+The training entrypoint lives here:
 
 ```text
 unet_train_ade20k.py
 ```
 
-It trains the model on ADE20K scene segmentation with:
+The training setup uses:
 
-- per-pixel cross entropy loss
+- per-pixel cross entropy
 - `ignore_index=-1` for unlabeled pixels
-- AdamW optimization
+- AdamW
 - cosine learning-rate schedule with warmup
 - Hugging Face Accelerate for multi-GPU training
 
-## Mental Model
+## The mental model I keep
 
-U-Net works because segmentation needs both:
+The encoder asks:
 
-- **semantic context**: what object or region is this?
-- **spatial precision**: exactly which pixels belong to it?
+what am I looking at?
 
-The encoder is good at context. The decoder is good at resolution. The skip connections let the decoder recover boundaries and fine structure without losing the encoder's higher-level understanding.
+The decoder asks:
+
+where exactly is it?
+
+The skip connections make sure the second question does not have to be answered from memory alone.
+
+That is the principle I like here: compression is powerful, but recovery needs receipts. U-Net keeps those receipts.
