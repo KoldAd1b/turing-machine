@@ -1,119 +1,71 @@
 # U-Net for Semantic Segmentation
 
-I used to think image models mostly answered one question:
-
-what is in this image?
-
-Then segmentation forces a much sharper question:
-
-what is every single pixel?
-
-That shift is the whole game. Classification gives one label. Segmentation gives a dense map. Same image, but now the model has to preserve meaning and location at the same time.
-
-This project implements a U-Net-style model for semantic segmentation and trains it from scratch on ADE20K, a 150-class natural scene parsing dataset.
+This project implements and trains a U-Net-style semantic segmentation model on
+ADE20K, a 150-class natural scene parsing dataset.
 
 Original paper: [U-Net: Convolutional Networks for Biomedical Image Segmentation](https://arxiv.org/abs/1505.04597), Ronneberger, Fischer, and Brox, 2015.
 
-## The problem is precision
+The implementation follows the main U-Net structure: an encoder compresses the
+input image into lower-resolution semantic features, and a decoder upsamples
+those features back into a dense per-pixel prediction map. Skip connections pass
+same-scale encoder features into the decoder so spatial detail is preserved
+while the model builds higher-level context.
 
-For a normal image classifier, the output is simple:
+## Implementation
 
-```text
-image -> class label
-```
-
-For segmentation, the output has to stay spatial:
-
-```text
-image:  [3, H, W]
-output: [num_classes, H, W]
-```
-
-Every pixel gets class logits.
-
-So the model needs two things that fight each other a little:
-
-- context, because a pixel only makes sense inside the larger scene
-- precision, because the final answer still has to land on exact pixels
-
-This is the tension U-Net solves so cleanly.
-
-## The beautiful move
-
-U-Net has a contracting path and an expanding path.
-
-The encoder compresses the image:
+Core files:
 
 ```text
-high resolution, low-level detail
-        |
-        v
-lower resolution, higher-level context
+unet_train_parts/model.py       U-Net-style model definition
+unet_train_parts/dataloader.py  ADE20K dataset loader
+unet_train_ade20k.py            training entrypoint
+data/README.md                  expected ADE20K directory layout
 ```
 
-The decoder expands it back:
-
-```text
-compressed context
-        |
-        v
-pixel-level prediction
-```
-
-If that were the whole architecture, the model would have a problem. The bottleneck knows what is in the image, but a lot of exact boundary information has been squeezed away.
-
-So U-Net keeps the encoder features and hands them back to the decoder through skip connections:
-
-```text
-encoder feature map ----------------------+
-                                          |
-                                          v
-upsampled decoder feature -> concatenate -> conv block
-```
-
-That is the part I find hard to get over.
-
-The model goes down to understand the scene, then comes back up with the details it saved along the way. Context and precision, both carried through the network. Simple, and a little bit magic.
-
-## What is in this implementation
-
-The model lives here:
-
-```text
-unet_train_parts/model.py
-```
-
-This version is not a literal line-by-line copy of the 2015 paper. It keeps the U-Net shape, but uses a few modern choices:
+This is not a literal reproduction of the 2015 biomedical U-Net. It keeps the
+encoder-decoder shape and concatenated skip connections, but uses several modern
+implementation choices:
 
 - residual convolution blocks
 - group normalization
 - strided convolutions for downsampling
 - transposed convolutions for upsampling
-- concatenated skip connections between encoder and decoder stages
-
-The ADE20K dataset code lives here:
-
-```text
-unet_train_parts/dataloader.py
-```
-
-The training entrypoint lives here:
-
-```text
-unet_train_ade20k.py
-```
+- same-padding convolutions
 
 The training setup uses:
 
 - per-pixel cross entropy
-- `ignore_index=-1` for unlabeled pixels
+- `ignore_index=-1` for unlabeled ADE20K pixels
 - AdamW
-- cosine learning-rate schedule with warmup
+- cosine learning-rate scheduling with warmup
 - Hugging Face Accelerate for multi-GPU training
 
-## Results
+## Data
 
-The completed run trained on ADE20K at 256px for 150 epochs using 4 RTX 2080 Ti GPUs.
+The dataset is not included in this repository. The code expects the ADE20K
+train/validation split in the following form:
+
+```text
+data/ADEChallengeData2016/
+├── images/
+│   ├── training/
+│   └── validation/
+└── annotations/
+    ├── training/
+    └── validation/
+```
+
+Use `--path_to_data` to point the training script at a different local dataset
+location.
+
+## Completed Run
+
+The completed run trained from scratch on ADE20K with the following setup:
+
+- image size: `256`
+- epochs: `150`
+- hardware: `4 x RTX 2080 Ti`
+- dataset: ADE20K train/validation split
 
 Final training-log metrics:
 
@@ -122,27 +74,21 @@ Final training-log metrics:
 - validation loss: `1.3005`
 - validation pixel accuracy: `62.42%`
 
-I later re-evaluated the saved best checkpoint with nearest-neighbor mask resizing and standard ignored-pixel handling:
+The saved best checkpoint was later re-evaluated with nearest-neighbor mask
+resizing and standard ignored-pixel handling:
 
 - validation pixel accuracy, excluding ignored pixels: `69.63%`
 - validation pixel accuracy, including ignored pixels: `63.79%`
 - mean pixel accuracy: `26.41%`
 - mean IoU: `19.77%`
 
-The stricter mIoU result is the more honest read of this model. Pixel accuracy says the model gets many common pixels right. mIoU shows the harder part: segmenting all 150 ADE20K classes well, including smaller and rarer categories.
+## Interpretation
 
-So I would not call this a benchmark-level ADE20K result. I would call it a useful from-scratch U-Net-style training run that shows both why skip connections matter and why modern scene parsing models need stronger pretrained backbones, multi-scale context, and richer decoders.
+The mIoU result is the stricter metric and should be treated as the primary
+quality signal. The model learns useful common-class segmentation behavior, but
+it is not competitive with modern ADE20K systems that use pretrained backbones,
+multi-scale context modules, and stronger decoder heads.
 
-## The mental model I keep
-
-The encoder asks:
-
-what am I looking at?
-
-The decoder asks:
-
-where exactly is it?
-
-The skip connections make sure the second question does not have to be answered from memory alone.
-
-That is the principle I like here: compression is powerful, but recovery needs receipts. U-Net keeps those receipts.
+This run is best understood as a from-scratch educational implementation of a
+U-Net-style segmentation model on a substantially harder task than the original
+biomedical setting.
