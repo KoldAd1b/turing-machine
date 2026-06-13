@@ -1,0 +1,8 @@
+{
+  "num_iterations": 150000,
+  "eval_interval": 2500,
+  "final_train_loss": 451.6372985839844,
+  "final_eval_loss": 457.6923522949219,
+  "best_eval_loss": 443.02618408203125,
+  "best_eval_iteration": 112500
+}
