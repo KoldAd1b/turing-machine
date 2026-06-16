@@ -1,0 +1,7 @@
+index,source_file,reference_wav,generated_wav,duration_sec,transcript
+1,data/LJSpeech-1.1/wavs/LJ001-0023.wav,01_LJ001-0023_reference.wav,01_LJ001-0023_generated.wav,8.440,"and was in fact the kind of letter used in the many splendid missals, psalters, etc., produced by printing in the fifteenth century."
+2,data/LJSpeech-1.1/wavs/LJ001-0128.wav,02_LJ001-0128_reference.wav,02_LJ001-0128_generated.wav,9.973,"it is not a real gain, for the modern printer throws the gain away by putting inordinately wide spaces between his lines, which, probably,"
+3,data/LJSpeech-1.1/wavs/LJ002-0057.wav,03_LJ002-0057_reference.wav,03_LJ002-0057_generated.wav,5.120,"These wards were all fitted with barrack-beds, but no bedding was supplied."
+4,data/LJSpeech-1.1/wavs/LJ003-0004.wav,04_LJ003-0004_reference.wav,04_LJ003-0004_generated.wav,2.264,"No remonstrance was attended to,"
+5,data/LJSpeech-1.1/wavs/LJ003-0016.wav,05_LJ003-0016_reference.wav,05_LJ003-0016_generated.wav,9.033,"Bad cases were removed to a cell on the felons' side, and here they were locked in solitary confinement for three days at a time."
+6,data/LJSpeech-1.1/wavs/LJ003-0082.wav,06_LJ003-0082_reference.wav,06_LJ003-0082_generated.wav,9.880,"The middle yard, as far as its limits would permit, was appropriated to felons and transports. The wards here were generally very crowded."

@@ -1,0 +1,11 @@
+{
+  "training_steps": 150000,
+  "final_train_mel_loss": 0.1654861450195312,
+  "final_generator_loss": 22.28342628479004,
+  "final_discriminator_loss": 2.763162612915039,
+  "final_val_mel_loss": 0.1654852628707885,
+  "best_val_mel_loss": 0.1654852628707885,
+  "best_val_step": 150000,
+  "global_batch_size": 96,
+  "sampling_rate": 22050
+}
